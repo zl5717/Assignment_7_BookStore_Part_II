@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 import os
 import sqlite3
 
@@ -148,6 +148,37 @@ def add_book():
 
     conn.close()
     return render_template("add_book.html", categories=categories)
+
+@app.route("/books-by-author", methods=["GET"])
+def books_by_author():
+    conn = get_db_connection()
+
+    categories = conn.execute("""
+        SELECT * FROM category ORDER BY categoryName
+    """).fetchall()
+
+    books = conn.execute("""
+        SELECT book.*, category.categoryName
+        FROM book
+        JOIN category ON book.categoryId = category.categoryId
+        ORDER BY book.author, book.title
+    """).fetchall()
+
+    conn.close()
+
+    # Group books by author
+    authors = {}
+    for book in books:
+        author = book["author"]
+        if author not in authors:
+            authors[author] = []
+        authors[author].append(book)
+
+    return render_template(
+        "books_by_author.html",
+        categories=categories,
+        authors=authors
+    )
 
 
 @app.errorhandler(Exception)
